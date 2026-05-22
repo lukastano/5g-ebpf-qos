@@ -10,7 +10,7 @@ Complete 5G network with real-time traffic control using eBPF.
 
 Install prerequisites:
 
-sudo apt-get update && sudo apt-get install -y docker.io docker-compose clang llvm libbpf-dev linux-tools-generic tcpdump python3-pip && sudo usermod -aG docker $USER && pip3 install pyroute2
+sudo apt-get update && sudo apt-get install -y docker.io docker-compose-v2 clang llvm libbpf-dev linux-tools-generic tcpdump python3-pip git && sudo usermod -aG docker $USER && pip3 install pyroute2 && docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions || true
 
 (Log out and back in after this)
 
