@@ -26,9 +26,9 @@ imei: '356938035643803'
 # IMEISV number of the device. It is used if no SUPI and IMEI is provided
 imeiSv: '4370816125816151'
 
-# List of gNB IP addresses for Radio Link Simulation
+# List of gNB IP addresses for Radio Link Simulation (use localhost since they're in same container)
 gnbSearchList:
-  - gnb.free5gc.org
+  - 127.0.0.1
 
 # UAC Access Identities Configuration
 uacAic:
