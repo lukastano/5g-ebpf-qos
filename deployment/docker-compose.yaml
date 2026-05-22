@@ -64,7 +64,7 @@ services:
     command: ./amf -c ./config/amfcfg.yaml
     expose:
       - "8000"
-ports:
+    ports:
       - "38412:38412/sctp"
     volumes:
       - ./config/amfcfg.yaml:/free5gc/config/amfcfg.yaml
