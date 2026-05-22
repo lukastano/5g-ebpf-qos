@@ -6,16 +6,16 @@ echo "Provisioning default subscriber..."
 # Wait for MongoDB to be ready
 echo "  Waiting for MongoDB to be ready..."
 for i in {1..30}; do
-    if docker exec mongodb mongosh --eval "db.runCommand('ping').ok" > /dev/null 2>&1; then
+    if docker exec mongodb mongo --eval "db.runCommand('ping').ok" free5gc > /dev/null 2>&1; then
         echo "  MongoDB is ready"
         break
     fi
     sleep 1
 done
 
-# Add subscriber
+# Add subscriber (using lowercase free5gc)
 echo "  Adding subscriber: IMSI 208930000000001"
-docker exec mongodb mongosh free5GC --eval '
+docker exec mongodb mongo free5gc --eval '
 db.subscriptionData.authenticationData.authenticationSubscription.insertOne({
   "ueId": "imsi-208930000000001",
   "authenticationMethod": "5G_AKA",
@@ -25,10 +25,10 @@ db.subscriptionData.authenticationData.authenticationSubscription.insertOne({
   "encOpcKey": "8e27b6af0e692e750f32667a3b14605d",
   "sequenceNumber": {"sqn": "000000000000", "sqnScheme": "NON_TIME_BASED", "lastIndexes": {}}
 })
-' > /dev/null 2>&1
+'
 
 # Add AMF data
-docker exec mongodb mongosh free5GC --eval '
+docker exec mongodb mongo free5gc --eval '
 db.subscriptionData.authenticationData.authenticationStatus.insertOne({
   "ueId": "imsi-208930000000001",
   "nfInstanceId": "00000000-0000-0000-0000-000000000000",
@@ -36,10 +36,10 @@ db.subscriptionData.authenticationData.authenticationStatus.insertOne({
   "timeStamp": "2026-01-01T00:00:00Z",
   "authType": "5G_AKA"
 })
-' > /dev/null 2>&1
+'
 
 # Add access and mobility data
-docker exec mongodb mongosh free5GC --eval '
+docker exec mongodb mongo free5gc --eval '
 db.subscriptionData.provisionedData.amData.insertOne({
   "ueId": "imsi-208930000000001",
   "servingPlmnId": "20893",
@@ -49,10 +49,10 @@ db.subscriptionData.provisionedData.amData.insertOne({
     "downlink": "2 Gbps"
   }
 })
-' > /dev/null 2>&1
+'
 
 # Add session management subscription data
-docker exec mongodb mongosh free5GC --eval '
+docker exec mongodb mongo free5gc --eval '
 db.subscriptionData.provisionedData.smData.insertOne({
   "ueId": "imsi-208930000000001",
   "servingPlmnId": "20893",
@@ -84,7 +84,7 @@ db.subscriptionData.provisionedData.smData.insertOne({
     }
   }
 })
-' > /dev/null 2>&1
+'
 
 echo "  Subscriber provisioned successfully"
 echo "  IMSI: 208930000000001"
