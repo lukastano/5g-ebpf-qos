@@ -16,3 +16,16 @@ sudo apt-get update && sudo apt-get install -y docker.io docker-compose clang ll
 
 ## Deploy system:
 git clone https://github.com/lukastano/5g-ebpf-qos && cd 5g-ebpf-qos && ./scripts/auto-start.sh
+
+## Test DROP policy (blocks all traffic):
+./scripts/set-policy.sh DROP && docker exec ueransim ping -I uesimtun0 -c 5 8.8.8.8
+
+## Test ALLOW policy (permits traffic):
+./scripts/set-policy.sh ALLOW && docker exec ueransim ping -I uesimtun0 -c 5 8.8.8.8
+
+## Run comprehensive test suite:
+./scripts/test-qos.sh
+
+##Stop system:
+./scripts/stop.sh
+
