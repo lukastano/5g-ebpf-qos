@@ -1,0 +1,24 @@
+# Compiled eBPF
+*.o
+*.ll
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Temp files
+/tmp/
+*.log
+*.txt
+
+# State files
+qos_state.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
