@@ -1,5 +1,5 @@
 #!/bin/bash
-# provision-subscriber.sh - Add default subscriber to MongoDB
+# provision-subscriber.sh - Add default subscriber to MongoDB (WebUI format)
 
 echo "Provisioning default subscriber..."
 
@@ -13,48 +13,73 @@ for i in {1..30}; do
     sleep 1
 done
 
-# Add subscriber (using lowercase free5gc)
-echo "  Adding subscriber: IMSI 208930000000001"
+# Clean up old subscriber data
+echo "  Cleaning up old subscriber data..."
+docker exec mongodb mongo free5gc --eval '
+db.subscriptionData.authenticationData.authenticationSubscription.deleteMany({"ueId": "imsi-208930000000003"});
+db.subscriptionData.authenticationData.authenticationStatus.deleteMany({"ueId": "imsi-208930000000003"});
+db.subscriptionData.provisionedData.amData.deleteMany({"ueId": "imsi-208930000000003"});
+db.subscriptionData.provisionedData.smData.deleteMany({"ueId": "imsi-208930000000003"});
+db.subscriptionData.provisionedData.smfSelectionSubscriptionData.deleteMany({"ueId": "imsi-208930000000003"});
+' > /dev/null 2>&1
+
+# Add subscriber - using IMSI 208930000000003 (default WebUI format)
+echo "  Adding subscriber: IMSI 208930000000003"
+
+# Authentication subscription
 docker exec mongodb mongo free5gc --eval '
 db.subscriptionData.authenticationData.authenticationSubscription.insertOne({
-  "ueId": "imsi-208930000000001",
-  "authenticationMethod": "5G_AKA",
+  "ueId": "imsi-208930000000003",
+  "authenticationMethod": "5G_AKA", 
   "encPermanentKey": "8baf473f2f8fd09487cccbd7097c6862",
   "authenticationManagementField": "8000",
   "algorithmId": "milenage",
   "encOpcKey": "8e27b6af0e692e750f32667a3b14605d",
-  "sequenceNumber": {"sqn": "000000000000", "sqnScheme": "NON_TIME_BASED", "lastIndexes": {}}
-})
-'
+  "sequenceNumber": {
+    "sqn": "000000000000",
+    "sqnScheme": "NON_TIME_BASED",
+    "lastIndexes": {}
+  }
+});
+' > /dev/null 2>&1
 
-# Add AMF data
-docker exec mongodb mongo free5gc --eval '
-db.subscriptionData.authenticationData.authenticationStatus.insertOne({
-  "ueId": "imsi-208930000000001",
-  "nfInstanceId": "00000000-0000-0000-0000-000000000000",
-  "success": true,
-  "timeStamp": "2026-01-01T00:00:00Z",
-  "authType": "5G_AKA"
-})
-'
-
-# Add access and mobility data
+# Access and Mobility subscription
 docker exec mongodb mongo free5gc --eval '
 db.subscriptionData.provisionedData.amData.insertOne({
-  "ueId": "imsi-208930000000001",
+  "ueId": "imsi-208930000000003",
   "servingPlmnId": "20893",
-  "gpsis": ["msisdn-0900000000"],
   "subscribedUeAmbr": {
-    "uplink": "1 Gbps",
-    "downlink": "2 Gbps"
-  }
-})
-'
+    "uplink": "2 Gbps",
+    "downlink": "1 Gbps"
+  },
+  "gpsis": ["msisdn-0900000000"]
+});
+' > /dev/null 2>&1
 
-# Add session management subscription data
+# SMF Selection subscription  
+docker exec mongodb mongo free5gc --eval '
+db.subscriptionData.provisionedData.smfSelectionSubscriptionData.insertOne({
+  "ueId": "imsi-208930000000003",
+  "servingPlmnId": "20893",
+  "subscribedSnssaiInfos": {
+    "01010203": {
+      "dnnInfos": [
+        {"dnn": "internet"}
+      ]
+    },
+    "01112233": {
+      "dnnInfos": [
+        {"dnn": "internet"}
+      ]
+    }
+  }
+});
+' > /dev/null 2>&1
+
+# Session Management subscription
 docker exec mongodb mongo free5gc --eval '
 db.subscriptionData.provisionedData.smData.insertOne({
-  "ueId": "imsi-208930000000001",
+  "ueId": "imsi-208930000000003",
   "servingPlmnId": "20893",
   "singleNssai": {
     "sst": 1,
@@ -78,15 +103,50 @@ db.subscriptionData.provisionedData.smData.insertOne({
         "priorityLevel": 8
       },
       "sessionAmbr": {
-        "uplink": "1000 Mbps",
-        "downlink": "1000 Mbps"
+        "uplink": "200 Mbps",
+        "downlink": "100 Mbps"  
       }
     }
   }
-})
-'
+});
+' > /dev/null 2>&1
+
+# Add second slice
+docker exec mongodb mongo free5gc --eval '
+db.subscriptionData.provisionedData.smData.insertOne({
+  "ueId": "imsi-208930000000003",
+  "servingPlmnId": "20893",
+  "singleNssai": {
+    "sst": 1,
+    "sd": "112233"
+  },
+  "dnnConfigurations": {
+    "internet": {
+      "pduSessionTypes": {
+        "defaultSessionType": "IPV4",
+        "allowedSessionTypes": ["IPV4"]
+      },
+      "sscModes": {
+        "defaultSscMode": "SSC_MODE_1",
+        "allowedSscModes": ["SSC_MODE_1", "SSC_MODE_2", "SSC_MODE_3"]
+      },
+      "5gQosProfile": {
+        "5qi": 8,
+        "arp": {
+          "priorityLevel": 8
+        },
+        "priorityLevel": 8
+      },
+      "sessionAmbr": {
+        "uplink": "200 Mbps",
+        "downlink": "100 Mbps"
+      }
+    }
+  }
+});
+' > /dev/null 2>&1
 
 echo "  Subscriber provisioned successfully"
-echo "  IMSI: 208930000000001"
+echo "  IMSI: 208930000000003"
 echo "  K: 8baf473f2f8fd09487cccbd7097c6862"
 echo "  OPc: 8e27b6af0e692e750f32667a3b14605d"
