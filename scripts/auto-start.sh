@@ -7,7 +7,7 @@ echo "Starting 5G eBPF QoS System..."
 echo ""
 
 # 1. Network configuration
-echo "[1/10] Configuring network..."
+echo "[1/11] Configuring network..."
 sudo sysctl -w net.ipv4.ip_forward=1 > /dev/null
 
 # Check which internet interface to use
@@ -28,7 +28,7 @@ docker network rm free5gc-compose_privnet 2>/dev/null || true
 
 # 2. Start Docker
 echo ""
-echo "[2/10] Starting Docker containers..."
+echo "[2/11] Starting Docker containers..."
 cd deployment
 
 # Clean start
@@ -53,9 +53,14 @@ fi
 
 cd ..
 
+# 2.5. Provision subscriber
+echo ""
+echo "[3/11] Provisioning subscriber in database..."
+./scripts/provision-subscriber.sh
+
 # 3. Start UE
 echo ""
-echo "[3/10] Starting UE..."
+echo "[4/11] Starting UE..."
 docker exec -d ueransim bash -c './nr-ue -c ./config/uecfg.yaml > /tmp/ue.log 2>&1'
 
 # Wait for UE registration
@@ -78,7 +83,7 @@ fi
 
 # 4. Test connectivity
 echo ""
-echo "[4/10] Testing connectivity..."
+echo "[5/11] Testing connectivity..."
 if timeout 5 docker exec ueransim ping -I uesimtun0 -c 2 -W 2 8.8.8.8 > /dev/null 2>&1; then
     echo "       SUCCESS: Internet connectivity working"
 else
@@ -88,7 +93,7 @@ fi
 
 # 5. Auto-detect veth interface
 echo ""
-echo "[5/10] Auto-detecting veth interface..."
+echo "[6/11] Auto-detecting veth interface..."
 
 # Method: Find veth with GTP-U traffic (port 2152)
 sudo timeout 10 tcpdump -i any -nn port 2152 -c 1 > /tmp/veth_detect.txt 2>&1 &
@@ -121,7 +126,7 @@ echo "       SUCCESS: Using interface: $VETH"
 
 # 6. Auto-detect TEID
 echo ""
-echo "[6/10] Auto-detecting TEID..."
+echo "[7/11] Auto-detecting TEID..."
 
 sudo timeout 8 tcpdump -i $VETH -nn port 2152 -X -c 1 > /tmp/teid_detect.txt 2>&1 &
 sleep 2
@@ -150,7 +155,7 @@ echo "       SUCCESS: Detected TEID: $TEID"
 
 # 7. Load eBPF
 echo ""
-echo "[7/10] Loading eBPF QoS program..."
+echo "[8/11] Loading eBPF QoS program..."
 cd ebpf-qos
 
 # Unload if already loaded
@@ -166,7 +171,7 @@ fi
 
 # 8. Set initial ALLOW policy
 echo ""
-echo "[8/10] Setting initial policy..."
+echo "[9/11] Setting initial policy..."
 if sudo ./qos_manager.py policy --teid $TEID --action 0; then
     echo "       SUCCESS: Initial policy: TEID $TEID -> ALLOW"
 else
@@ -185,7 +190,7 @@ ENVEOF
 
 # 10. Verify eBPF is working
 echo ""
-echo "[9/10] Verifying eBPF..."
+echo "[10/11] Verifying eBPF..."
 sleep 2
 docker exec ueransim ping -I uesimtun0 -c 3 8.8.8.8 > /dev/null 2>&1
 
@@ -199,7 +204,7 @@ fi
 
 # 11. Final summary
 echo ""
-echo "[10/10] Startup complete"
+echo "[11/11] Startup complete"
 echo ""
 echo "=========================================="
 echo "5G eBPF QoS System is Ready"
@@ -210,6 +215,11 @@ echo "  Interface:  $VETH"
 echo "  TEID:       $TEID"
 echo "  UE IP:      $UE_IP"
 echo "  Policy:     ALLOW (traffic flowing)"
+echo ""
+echo "Subscriber:"
+echo "  IMSI: 208930000000001"
+echo "  K:    8baf473f2f8fd09487cccbd7097c6862"
+echo "  OPc:  8e27b6af0e692e750f32667a3b14605d"
 echo ""
 echo "Commands:"
 echo "  Block traffic:   ./scripts/set-policy.sh DROP"
