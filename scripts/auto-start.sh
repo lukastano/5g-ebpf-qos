@@ -113,9 +113,16 @@ fi
 TEID=$((16#${TEID_HEX:0:8}))
 echo "       SUCCESS: Detected TEID: $TEID"
 
-# [8/11] Load eBPF
-echo "[8/11] Loading eBPF program..."
+# [8/11] Build and load eBPF
+echo "[8/11] Building and loading eBPF program..."
 cd ebpf-qos
+
+# Build if not already built
+if [ ! -f "gtp_qos.bpf.o" ]; then
+    echo "       Building eBPF object file..."
+    make > /dev/null 2>&1
+fi
+
 sudo ./qos_manager.py load --interface $VETH
 cd ..
 echo "       eBPF loaded on $VETH"
