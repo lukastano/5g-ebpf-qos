@@ -1,5 +1,5 @@
 #!/bin/bash
-# provision-subscriber.sh - Add default subscriber to MongoDB (WebUI format)
+# provision-subscriber.sh - Add default subscriber to MongoDB (WebUI-compatible format)
 
 echo "Provisioning default subscriber..."
 
@@ -23,14 +23,14 @@ db.subscriptionData.provisionedData.smData.deleteMany({"ueId": "imsi-20893000000
 db.subscriptionData.provisionedData.smfSelectionSubscriptionData.deleteMany({"ueId": "imsi-208930000000003"});
 ' > /dev/null 2>&1
 
-# Add subscriber - using IMSI 208930000000003 (default WebUI format)
+# Add subscriber
 echo "  Adding subscriber: IMSI 208930000000003"
 
 # Authentication subscription
 docker exec mongodb mongo free5gc --eval '
 db.subscriptionData.authenticationData.authenticationSubscription.insertOne({
   "ueId": "imsi-208930000000003",
-  "authenticationMethod": "5G_AKA", 
+  "authenticationMethod": "5G_AKA",
   "encPermanentKey": "8baf473f2f8fd09487cccbd7097c6862",
   "authenticationManagementField": "8000",
   "algorithmId": "milenage",
@@ -43,24 +43,36 @@ db.subscriptionData.authenticationData.authenticationSubscription.insertOne({
 });
 ' > /dev/null 2>&1
 
-# Access and Mobility subscription
+# Access and Mobility subscription (WITH nssai field!)
 docker exec mongodb mongo free5gc --eval '
 db.subscriptionData.provisionedData.amData.insertOne({
   "ueId": "imsi-208930000000003",
   "servingPlmnId": "20893",
   "subscribedUeAmbr": {
-    "uplink": "2 Gbps",
-    "downlink": "1 Gbps"
+    "uplink": "1 Gbps",
+    "downlink": "2 Gbps"
   },
-  "gpsis": ["msisdn-0900000000"]
+  "gpsis": ["msisdn-"],
+  "nssai": {
+    "defaultSingleNssais": [
+      {
+        "sst": 1,
+        "sd": "010203"
+      }
+    ],
+    "singleNssais": [
+      {
+        "sst": 1,
+        "sd": "112233"
+      }
+    ]
+  }
 });
 ' > /dev/null 2>&1
 
-# SMF Selection subscription  
+# SMF Selection subscription
 docker exec mongodb mongo free5gc --eval '
 db.subscriptionData.provisionedData.smfSelectionSubscriptionData.insertOne({
-  "ueId": "imsi-208930000000003",
-  "servingPlmnId": "20893",
   "subscribedSnssaiInfos": {
     "01010203": {
       "dnnInfos": [
@@ -72,76 +84,82 @@ db.subscriptionData.provisionedData.smfSelectionSubscriptionData.insertOne({
         {"dnn": "internet"}
       ]
     }
-  }
+  },
+  "ueId": "imsi-208930000000003",
+  "servingPlmnId": "20893"
 });
 ' > /dev/null 2>&1
 
-# Session Management subscription
+# Session Management subscription - slice 1 (010203)
 docker exec mongodb mongo free5gc --eval '
 db.subscriptionData.provisionedData.smData.insertOne({
-  "ueId": "imsi-208930000000003",
-  "servingPlmnId": "20893",
-  "singleNssai": {
-    "sst": 1,
-    "sd": "010203"
-  },
   "dnnConfigurations": {
     "internet": {
-      "pduSessionTypes": {
-        "defaultSessionType": "IPV4",
-        "allowedSessionTypes": ["IPV4"]
-      },
-      "sscModes": {
-        "defaultSscMode": "SSC_MODE_1",
-        "allowedSscModes": ["SSC_MODE_1", "SSC_MODE_2", "SSC_MODE_3"]
-      },
       "5gQosProfile": {
         "5qi": 9,
         "arp": {
+          "preemptCap": "",
+          "preemptVuln": "",
           "priorityLevel": 8
         },
         "priorityLevel": 8
       },
       "sessionAmbr": {
-        "uplink": "200 Mbps",
-        "downlink": "100 Mbps"  
-      }
-    }
-  }
-});
-' > /dev/null 2>&1
-
-# Add second slice
-docker exec mongodb mongo free5gc --eval '
-db.subscriptionData.provisionedData.smData.insertOne({
-  "ueId": "imsi-208930000000003",
-  "servingPlmnId": "20893",
-  "singleNssai": {
-    "sst": 1,
-    "sd": "112233"
-  },
-  "dnnConfigurations": {
-    "internet": {
+        "uplink": "1000 Mbps",
+        "downlink": "1000 Mbps"
+      },
       "pduSessionTypes": {
         "defaultSessionType": "IPV4",
         "allowedSessionTypes": ["IPV4"]
       },
       "sscModes": {
         "defaultSscMode": "SSC_MODE_1",
-        "allowedSscModes": ["SSC_MODE_1", "SSC_MODE_2", "SSC_MODE_3"]
-      },
+        "allowedSscModes": ["SSC_MODE_2", "SSC_MODE_3"]
+      }
+    }
+  },
+  "ueId": "imsi-208930000000003",
+  "servingPlmnId": "20893",
+  "singleNssai": {
+    "sd": "010203",
+    "sst": 1
+  }
+});
+' > /dev/null 2>&1
+
+# Session Management subscription - slice 2 (112233)
+docker exec mongodb mongo free5gc --eval '
+db.subscriptionData.provisionedData.smData.insertOne({
+  "dnnConfigurations": {
+    "internet": {
       "5gQosProfile": {
         "5qi": 8,
         "arp": {
+          "preemptCap": "",
+          "preemptVuln": "",
           "priorityLevel": 8
         },
         "priorityLevel": 8
       },
       "sessionAmbr": {
-        "uplink": "200 Mbps",
-        "downlink": "100 Mbps"
+        "uplink": "1000 Mbps",
+        "downlink": "1000 Mbps"
+      },
+      "pduSessionTypes": {
+        "defaultSessionType": "IPV4",
+        "allowedSessionTypes": ["IPV4"]
+      },
+      "sscModes": {
+        "defaultSscMode": "SSC_MODE_1",
+        "allowedSscModes": ["SSC_MODE_2", "SSC_MODE_3"]
       }
     }
+  },
+  "ueId": "imsi-208930000000003",
+  "servingPlmnId": "20893",
+  "singleNssai": {
+    "sd": "112233",
+    "sst": 1
   }
 });
 ' > /dev/null 2>&1
