@@ -21,6 +21,11 @@ sudo iptables -C FORWARD 1 -j ACCEPT 2>/dev/null || \
 
 echo "       Network configured"
 
+# Clean up old Docker networks
+echo "       Cleaning up old networks..."
+docker network rm deployment_privnet 2>/dev/null || true
+docker network rm free5gc-compose_privnet 2>/dev/null || true
+
 # 2. Start Docker
 echo ""
 echo "[2/10] Starting Docker containers..."

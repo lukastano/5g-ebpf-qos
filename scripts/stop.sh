@@ -17,6 +17,12 @@ fi
 echo "  Stopping Docker containers..."
 cd deployment
 docker compose down
+
+# Clean up networks
+echo "  Cleaning up networks..."
+docker network rm deployment_privnet 2>/dev/null || true
+docker network rm free5gc-compose_privnet 2>/dev/null || true
+
 cd ..
 
 echo "System stopped successfully"
