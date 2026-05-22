@@ -54,7 +54,8 @@ int gtp_qos_filter(struct __sk_buff *skb)
     if ((void *)(udp + 1) > data_end)
         return TC_ACT_OK;
     
-    if (udp->dest != bpf_htons(2152))
+    // Check BOTH source and destination ports for GTP-U (2152)
+    if (udp->dest != bpf_htons(2152) && udp->source != bpf_htons(2152))
         return TC_ACT_OK;
     
     struct gtpv1_hdr *gtp = (void *)(udp + 1);
@@ -63,6 +64,7 @@ int gtp_qos_filter(struct __sk_buff *skb)
     
     __u32 teid = bpf_ntohl(gtp->teid);
     
+    // Update stats
     __u64 init_val = 1;
     __u64 *count = bpf_map_lookup_elem(&stats_map, &teid);
     if (count) {
@@ -71,6 +73,7 @@ int gtp_qos_filter(struct __sk_buff *skb)
         bpf_map_update_elem(&stats_map, &teid, &init_val, BPF_ANY);
     }
     
+    // Check policy
     __u32 *policy = bpf_map_lookup_elem(&qos_policy_map, &teid);
     if (policy && *policy == 1) {
         bpf_printk("GTP QoS: DROP TEID=%u\n", teid);
