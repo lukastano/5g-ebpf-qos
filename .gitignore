@@ -22,3 +22,6 @@ qos_state.env
 
 # OS
 .DS_Store
+
+# cert
+*.pem

@@ -9,6 +9,11 @@
 
 #define ETH_P_IP 0x0800
 
+#define ACTION_ALLOW        0
+#define ACTION_DROP         1
+
+#define MAX_BURST (1024 * 1024)
+
 struct gtpv1_hdr {
     __u8 flags;
     __u8 type;
@@ -16,18 +21,30 @@ struct gtpv1_hdr {
     __u32 teid;
 } __attribute__((packed));
 
+struct qos_policy {
+    __u32 action;
+    __u32 priority;
+    __u32 classid;
+};
+
+struct stats {
+    __u64 packets;
+    __u64 bytes;
+    __u64 drops;
+};
+
 struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __uint(max_entries, 1024);
     __type(key, __u32);
-    __type(value, __u32);
+    __type(value, struct qos_policy);
 } qos_policy_map SEC(".maps");
 
 struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __uint(max_entries, 1024);
     __type(key, __u32);
-    __type(value, __u64);
+    __type(value, struct stats);
 } stats_map SEC(".maps");
 
 SEC("tc")
@@ -65,23 +82,41 @@ int gtp_qos_filter(struct __sk_buff *skb)
     __u32 teid = bpf_ntohl(gtp->teid);
     
     // Update stats
-    __u64 init_val = 1;
-    __u64 *count = bpf_map_lookup_elem(&stats_map, &teid);
-    if (count) {
-        __sync_fetch_and_add(count, 1);
-    } else {
-        bpf_map_update_elem(&stats_map, &teid, &init_val, BPF_ANY);
+    struct stats *s;
+    struct stats init_stats = {};
+
+    s = bpf_map_lookup_elem(&stats_map, &teid);
+    if (!s) {
+        bpf_map_update_elem(&stats_map, &teid, &init_stats, BPF_ANY);
+        s = bpf_map_lookup_elem(&stats_map, &teid);
     }
-    
-    // Check policy
-    __u32 *policy = bpf_map_lookup_elem(&qos_policy_map, &teid);
-    if (policy && *policy == 1) {
-        bpf_printk("GTP QoS: DROP TEID=%u\n", teid);
-        return TC_ACT_SHOT;
+    if (s) {
+        __sync_fetch_and_add(&s->packets, 1);
+        __sync_fetch_and_add(&s->bytes, skb->len);
     }
-    
-    bpf_printk("GTP packet: TEID=%u\n", teid);
-    return TC_ACT_OK;
+
+    struct qos_policy *policy;
+    policy = bpf_map_lookup_elem(&qos_policy_map, &teid);
+    if (!policy)
+        return TC_ACT_OK;
+    switch (policy->action) {
+        case ACTION_DROP:
+            if (s)
+                __sync_fetch_and_add(&s->drops, 1);
+            bpf_printk("GTP QoS: DROP TEID=%u\n", teid);
+            return TC_ACT_SHOT;
+        case ACTION_ALLOW:
+            // skb->priority = policy->priority;
+            // skb->priority = (1 << 16) | (policy->classid & 0xFFFF);
+            skb->mark = policy->classid;
+            bpf_printk("GTP QoS: ALLOW TEID=%u priority=%u classid=%u\n", 
+                    teid, policy->priority, policy->classid);
+            // bpf_printk("GTP QoS: ALLOW TEID=%u -> Mapping to Class 1:%u (Hex: 0x%x)\n", 
+            //         teid, policy->classid, skb->priority);
+            return TC_ACT_OK;
+        default:
+            return TC_ACT_OK;
+    }
 }
 
 char _license[] SEC("license") = "GPL";

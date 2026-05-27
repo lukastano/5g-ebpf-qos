@@ -306,11 +306,15 @@ services:
 
   ueransim:
     container_name: ueransim
-    image: free5gc/ueransim:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.ueransim
+    image: ueransim-iperf
     command: ./nr-gnb -c ./config/gnbcfg.yaml
     volumes:
       - ./config/gnbcfg.yaml:/ueransim/config/gnbcfg.yaml
       - ./config/uecfg.yaml:/ueransim/config/uecfg.yaml
+      - ./config/ue2cfg.yaml:/ueransim/config/ue2cfg.yaml
     cap_add:
       - NET_ADMIN
     devices:
@@ -341,6 +345,16 @@ services:
           - n3ue.free5gc.org
     depends_on:
       - free5gc-n3iwf
+    logging: *loki-logging
+  
+  iperf-server:
+    container_name: iperf-server
+    image: networkstatic/iperf3
+    command: -s
+    networks:
+      privnet:
+        aliases:
+          - iperf-server
     logging: *loki-logging
 
 networks:
