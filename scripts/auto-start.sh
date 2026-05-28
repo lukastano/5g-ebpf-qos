@@ -411,11 +411,11 @@ echo "=========================================="
 
 echo ""
 echo "UE1 traffic:"
-echo "docker exec ueransim iperf3 -c iperf-server -u -b 100M -t 5 --bind-dev uesimtun0"
+echo "docker exec ueransim iperf3 -c iperf-server-1 -u -b 100M -t 5 --bind-dev uesimtun0"
 
 echo ""
 echo "UE2 traffic:"
-echo "docker exec ueransim iperf3 -c iperf-server -u -b 100M -t 5 --bind-dev uesimtun1"
+echo "docker exec ueransim iperf3 -c iperf-server-2 -u -b 100M -t 5 --bind-dev uesimtun1"
 
 echo ""
 echo "View tc classes:"

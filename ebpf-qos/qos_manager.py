@@ -27,12 +27,12 @@ class GTPQoSManager:
 
         subprocess.run(
             ["sudo", "tc", "class", "add", "dev", self.interface, "parent",
-             "1:", "classid", "1:1", "htb", "rate", "1000mbit", "ceil", "1000mbit"]
+             "1:", "classid", "1:1", "htb", "rate", "30mbit", "ceil", "30mbit"]
         )
 
         subprocess.run(
             ["sudo", "tc", "class", "add", "dev", self.interface, "parent",
-             "1:1", "classid", "1:999", "htb", "rate", "1000mbit", "ceil", "1000mbit",
+             "1:1", "classid", "1:999", "htb", "rate", "30mbit", "ceil", "30mbit",
              "prio", "7"]
         )
 
